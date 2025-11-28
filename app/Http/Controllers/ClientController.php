@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Client;
 use Illuminate\Http\Request;
 
@@ -9,9 +10,16 @@ class ClientController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $clients = Client::paginate(10);
+        $query = Client::query();
+
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%'.$request->search.'%');
+        }
+
+        $clients = $query->paginate(10)->withQueryString();
+
         return view('clients.index', compact('clients'));
     }
 
@@ -33,21 +41,21 @@ class ClientController extends Controller
             'phone' => 'required|numeric',
             'photo' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
-     
-        $client = new Client();
+
+        $client = new Client;
         $client->name = $request->name;
         $client->phone = $request->phone;
-     
+
         if ($request->hasFile('photo')) {
             $fileName = time().'.'.$request->photo->extension();
             $request->photo->move(public_path('photos'), $fileName);
             $client->photo = $fileName;
         }
-     
+
         $client->save();
-     
+
         return redirect()->route('clients.index')->with('success', 'Client successfully added');
-    
+
     }
 
     /**
@@ -64,6 +72,7 @@ class ClientController extends Controller
     public function edit(string $id)
     {
         $client = Client::find($id);
+
         return view('clients.edit', compact('client'));
     }
 
@@ -72,29 +81,29 @@ class ClientController extends Controller
      */
     public function update(Request $request, string $id)
     {
-         $request->validate([
+        $request->validate([
             'name' => 'required',
             'phone' => 'required',
             'photo' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
         $client = Client::find($id);
- 
+
         $client->name = $request->name;
         $client->phone = $request->phone;
- 
+
         if ($request->hasFile('photo')) {
             // Supprimer l'ancienne photo si elle existe
             if ($client->photo) {
-                unlink(public_path('photos/' . $client->photo));
+                unlink(public_path('photos/'.$client->photo));
             }
- 
+
             $fileName = time().'.'.$request->photo->extension();
             $request->photo->move(public_path('photos'), $fileName);
             $client->photo = $fileName;
         }
- 
+
         $client->save();
- 
+
         return redirect()->route('clients.index')->with('success', 'Client successfully updated');
     }
 
